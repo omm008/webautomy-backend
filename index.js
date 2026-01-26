@@ -3,6 +3,14 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const axios = require("axios");
 const cors = require("cors");
+const express = require("express");
+const app = express();
+
+// 👇 1. IMPORT SECURITY PACKAGES
+const rateLimit = require("express-rate-limit");
+
+// 👇 2. TRUST PROXY (Render/Heroku ke liye zaroori hai)
+app.set("trust proxy", 1);
 // 1. Supabase Import kiya
 const { createClient } = require("@supabase/supabase-js");
 
