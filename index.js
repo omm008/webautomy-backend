@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
+const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
@@ -22,6 +23,7 @@ const supabase = createClient(
 );
 
 // Middleware
+app.use(cors()); // 👈 Enable CORS for Frontend Communication
 app.use(express.json());
 
 // ==========================================
@@ -29,34 +31,60 @@ app.use(express.json());
 // ==========================================
 
 // Function to send WhatsApp Message via Meta API
-async function sendWhatsAppMessage(to, bodyText) {
-  if (!IS_LIVE_MODE) {
-    console.log("🟡 SIMULATION: Would send:", bodyText);
-    return "simulated_id";
+async function sendWhatsAppMessage(
+  to,
+  body,
+  mediaUrl = null,
+  mediaType = "text",
+) {
+  const token = process.env.WA_TOKEN;
+  const phoneId = process.env.WA_PHONE_NUMBER_ID;
+
+  if (!token || !phoneId) {
+    console.error(
+      "❌ Error: WA_TOKEN or WA_PHONE_NUMBER_ID is missing in .env",
+    );
+    return;
+  }
+
+  // Payload prepare karo (Text vs Media)
+  let payload = {
+    messaging_product: "whatsapp",
+    to: to,
+  };
+
+  if (mediaUrl) {
+    // === MEDIA MESSAGE ===
+    const type = mediaType.startsWith("image") ? "image" : "document";
+    payload.type = type;
+    payload[type] = { link: mediaUrl };
+    if (type === "document")
+      payload[type].caption = body || "Sent via WebAutomy";
+  } else {
+    // === TEXT MESSAGE ===
+    payload.type = "text";
+    payload.text = { body: body };
   }
 
   try {
-    const response = await axios({
-      method: "POST",
-      url: `https://graph.facebook.com/v21.0/${WA_PHONE_NUMBER_ID}/messages`,
-      headers: {
-        Authorization: `Bearer ${WA_TOKEN}`,
-        "Content-Type": "application/json",
+    const response = await axios.post(
+      `https://graph.facebook.com/v22.0/${phoneId}/messages`, // v22.0 latest hai
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       },
-      data: {
-        messaging_product: "whatsapp",
-        to: to,
-        type: "text",
-        text: { body: bodyText },
-      },
-    });
-    return response.data.messages[0].id;
+    );
+    console.log("✅ Message sent to WhatsApp:", response.data);
+    return response.data;
   } catch (error) {
     console.error(
-      "⚠️ WhatsApp API Error:",
-      error.response?.data || error.message,
+      "❌ Error sending message:",
+      error.response ? error.response.data : error.message,
     );
-    return null;
+    throw error;
   }
 }
 
@@ -196,6 +224,32 @@ app.post("/webhook", async (req, res) => {
     }
   } catch (error) {
     console.error("❌ Webhook Processing Error:", error.message);
+  }
+});
+
+// ==========================================
+// 📨 API FOR FRONTEND (SEND MESSAGE)
+// ==========================================
+app.post("/api/send-message", async (req, res) => {
+  // Frontend se ye data aayega
+  const { phone, message, mediaUrl, mediaType } = req.body;
+
+  if (!phone) {
+    return res.status(400).json({ error: "Phone number is required" });
+  }
+
+  try {
+    // Helper function ko call karo
+    const response = await sendWhatsAppMessage(
+      phone,
+      message,
+      mediaUrl,
+      mediaType,
+    );
+    res.status(200).json({ success: true, data: response });
+  } catch (error) {
+    console.error("API Error:", error.message);
+    res.status(500).json({ error: "Failed to send message" });
   }
 });
 
