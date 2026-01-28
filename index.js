@@ -18,8 +18,8 @@ const IS_LIVE_MODE = WA_TOKEN && WA_TOKEN.length > 20;
 
 // Initialize Supabase
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY,
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY,
 );
 
 // Middleware
