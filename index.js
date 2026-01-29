@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
+const onboardingRoute = require("./src/routes/onboarding");
 
 /* ======================================================
    APP INIT
@@ -40,6 +41,14 @@ const authMiddleware = require("./src/middleware/auth")({
   supabasePublic,
   supabaseAdmin,
 });
+
+app.use(
+  "/api/onboard",
+  onboardingRoute({
+    supabaseAdmin,
+    authMiddleware,
+  }),
+);
 
 /* ======================================================
    ROUTES
