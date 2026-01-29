@@ -55,6 +55,7 @@ app.use(
 ====================================================== */
 const webhookRoute = require("./src/routes/webhook");
 const sendMessageRoute = require("./src/routes/sendMessage");
+const analyticsRoute = require("./src/routes/analytics");
 
 /* ======================================================
    HEALTH CHECK
@@ -83,6 +84,14 @@ app.use(
     authMiddleware,
     walletService,
     whatsappService,
+  }),
+);
+
+app.use(
+  "/api/analytics",
+  analyticsRoute({
+    supabaseAdmin,
+    authMiddleware,
   }),
 );
 
